@@ -1,0 +1,1818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Swiss Chess Tournament</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ivory: #F5F0E8;
+    --cream: #EDE7D9;
+    --ink: #1A1614;
+    --mahogany: #6B2D2D;
+    --gold: #C9A84C;
+    --gold-light: #E8C96A;
+    --warm-gray: #8A8278;
+    --board-dark: #8B5A2B;
+    --board-light: #F0D9B5;
+    --clan-a: #C9A84C;
+    --clan-b: #4A7C6B;
+    --clan-c: #6B4A7C;
+    --clan-d: #7C4A4A;
+    --white-piece: #F5F0E8;
+    --black-piece: #2C1810;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--ink);
+    color: var(--ivory);
+    font-family: 'IBM Plex Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background chess pattern */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: 
+      repeating-conic-gradient(rgba(255,255,255,0.015) 0% 25%, transparent 0% 50%);
+    background-size: 60px 60px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+  }
+
+  /* Header */
+  header {
+    text-align: center;
+    padding: 40px 0 36px;
+    border-bottom: 1px solid rgba(201,168,76,0.25);
+    margin-bottom: 36px;
+  }
+
+  .crown {
+    font-size: 2rem;
+    display: block;
+    margin-bottom: 8px;
+    filter: drop-shadow(0 0 12px rgba(201,168,76,0.5));
+    animation: glow 3s ease-in-out infinite;
+  }
+
+  @keyframes glow {
+    0%,100% { filter: drop-shadow(0 0 8px rgba(201,168,76,0.4)); }
+    50% { filter: drop-shadow(0 0 20px rgba(201,168,76,0.8)); }
+  }
+
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    color: var(--ivory);
+    line-height: 1;
+  }
+
+  h1 span { color: var(--gold); }
+
+  .subtitle {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--warm-gray);
+    margin-top: 10px;
+  }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 10px;
+    padding: 4px;
+    margin-bottom: 28px;
+    border: 1px solid rgba(255,255,255,0.07);
+  }
+
+  .tab {
+    flex: 1;
+    padding: 10px 16px;
+    background: none;
+    border: none;
+    color: var(--warm-gray);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 7px;
+    transition: all 0.2s;
+  }
+
+  .tab.active {
+    background: var(--mahogany);
+    color: var(--ivory);
+    border: 1px solid rgba(201,168,76,0.3);
+  }
+
+  .tab:hover:not(.active) { color: var(--ivory); background: rgba(255,255,255,0.05); }
+
+  /* Panels */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* Section headers */
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--gold);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(201,168,76,0.2);
+  }
+
+  /* Cards */
+  .card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+
+  /* Player setup */
+  .setup-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  @media (max-width: 680px) { .setup-grid { grid-template-columns: 1fr; } }
+
+  label {
+    display: block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--warm-gray);
+    margin-bottom: 6px;
+  }
+
+  input, select, textarea {
+    width: 100%;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--ivory);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--gold);
+    background: rgba(201,168,76,0.06);
+  }
+
+  select option { background: #2C1810; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-gold {
+    background: var(--gold);
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  .btn-gold:hover:not(:disabled) { background: var(--gold-light); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(201,168,76,0.3); }
+  .btn-gold:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  .btn-outline {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.2);
+    color: var(--ivory);
+  }
+
+  .btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+
+  .btn-danger {
+    background: transparent;
+    border: 1px solid rgba(180,60,60,0.4);
+    color: #e07070;
+  }
+
+  .btn-danger:hover { background: rgba(180,60,60,0.15); }
+
+  .btn-sm { padding: 6px 12px; font-size: 0.72rem; }
+
+  /* Player list */
+  .player-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .player-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 8px;
+    transition: background 0.15s;
+  }
+
+  .player-item:hover { background: rgba(255,255,255,0.06); }
+
+  .player-rank {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--warm-gray);
+    width: 24px;
+    text-align: center;
+  }
+
+  .clan-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .player-name { flex: 1; font-weight: 500; }
+
+  .clan-badge {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-weight: 500;
+  }
+
+  .clan-A { background: rgba(201,168,76,0.15); color: var(--clan-a); border: 1px solid rgba(201,168,76,0.25); }
+  .clan-B { background: rgba(74,124,107,0.15); color: var(--clan-b); border: 1px solid rgba(74,124,107,0.25); }
+  .clan-C { background: rgba(107,74,124,0.15); color: var(--clan-c); border: 1px solid rgba(107,74,124,0.25); }
+  .clan-D { background: rgba(124,74,74,0.15); color: var(--clan-d); border: 1px solid rgba(124,74,74,0.25); }
+
+  /* Rounds */
+  .round-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .round-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--ivory);
+  }
+
+  .round-badge {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    background: rgba(201,168,76,0.12);
+    color: var(--gold);
+    border: 1px solid rgba(201,168,76,0.25);
+    padding: 4px 12px;
+    border-radius: 20px;
+  }
+
+  /* Pairing card */
+  .pairing-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 10px;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 16px;
+    transition: background 0.15s;
+  }
+
+  .pairing-card:hover { background: rgba(255,255,255,0.05); }
+
+  .pairing-card.bye-card {
+    grid-template-columns: 1fr;
+    border-color: rgba(201,168,76,0.15);
+    background: rgba(201,168,76,0.04);
+  }
+
+  .pairing-player {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .pairing-player.right { align-items: flex-end; text-align: right; }
+
+  .pairing-player-name {
+    font-weight: 600;
+    font-size: 1rem;
+  }
+
+  .pairing-player-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.78rem;
+    color: var(--warm-gray);
+  }
+
+  .pairing-player.right .pairing-player-meta { justify-content: flex-end; }
+
+  .color-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.05em;
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+
+  .color-chip.white-chip {
+    background: rgba(245,240,232,0.15);
+    color: var(--ivory);
+    border: 1px solid rgba(245,240,232,0.2);
+  }
+
+  .color-chip.black-chip {
+    background: rgba(44,24,16,0.6);
+    color: #C0A88A;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .pairing-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .vs-label {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem;
+    color: var(--warm-gray);
+  }
+
+  .board-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    color: rgba(138,130,120,0.5);
+    letter-spacing: 0.1em;
+  }
+
+  .result-buttons {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .result-btn {
+    padding: 4px 10px;
+    border-radius: 5px;
+    border: 1px solid;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: transparent;
+  }
+
+  .res-white { border-color: rgba(245,240,232,0.3); color: var(--ivory); }
+  .res-white:hover { background: rgba(245,240,232,0.15); }
+  .res-white.selected { background: var(--ivory); color: var(--ink); border-color: var(--ivory); font-weight: 700; box-shadow: 0 0 10px rgba(245,240,232,0.45); }
+
+  .res-draw { border-color: rgba(201,168,76,0.3); color: var(--gold); }
+  .res-draw:hover { background: rgba(201,168,76,0.15); }
+  .res-draw.selected { background: var(--gold); color: var(--ink); border-color: var(--gold); font-weight: 700; box-shadow: 0 0 10px rgba(201,168,76,0.5); }
+
+  .res-black { border-color: rgba(138,130,120,0.3); color: var(--warm-gray); }
+  .res-black:hover { background: rgba(138,130,120,0.15); }
+  .res-black.selected { background: #5a5450; color: var(--ivory); border-color: #8A8278; font-weight: 700; box-shadow: 0 0 10px rgba(138,130,120,0.4); }
+  .res-forfeit { border-color: rgba(180,60,60,0.3); color: #e07070; }
+  .res-forfeit:hover { background: rgba(180,60,60,0.12); }
+  .res-forfeit.selected { background: #7a2020; color: #ffaaaa; border-color: #e07070; font-weight: 700; box-shadow: 0 0 10px rgba(180,60,60,0.4); }
+
+  /* Standings */
+  .standings-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+  }
+
+  .standings-table th {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--warm-gray);
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    text-align: left;
+  }
+
+  .standings-table td {
+    padding: 11px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+
+  .standings-table tr:hover td { background: rgba(255,255,255,0.03); }
+
+  .standings-table .pos {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--warm-gray);
+    width: 36px;
+  }
+
+  .standings-table .score {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--gold);
+  }
+
+  .color-history {
+    display: flex;
+    gap: 3px;
+  }
+
+  .ch-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  .ch-dot.w { background: var(--ivory); }
+  .ch-dot.b { background: var(--warm-gray); }
+  .ch-dot.bye { background: var(--gold); opacity: 0.5; }
+
+  /* Info alert */
+  .alert {
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .alert-info {
+    background: rgba(74,124,107,0.12);
+    border: 1px solid rgba(74,124,107,0.25);
+    color: #7BC4AA;
+  }
+
+  .alert-warn {
+    background: rgba(201,168,76,0.1);
+    border: 1px solid rgba(201,168,76,0.25);
+    color: var(--gold);
+  }
+
+  .alert-err {
+    background: rgba(180,60,60,0.1);
+    border: 1px solid rgba(180,60,60,0.25);
+    color: #e07070;
+  }
+
+  /* Stats bar */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .stat-box {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 10px;
+    padding: 14px 16px;
+    text-align: center;
+  }
+
+  .stat-val {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--gold);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .stat-lbl {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--warm-gray);
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.2); border-radius: 3px; }
+
+  .actions-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .bye-text {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--gold);
+    text-align: center;
+    padding: 6px;
+  }
+
+  .bye-player {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--ivory);
+    text-align: center;
+  }
+
+  .no-data {
+    text-align: center;
+    padding: 40px;
+    color: var(--warm-gray);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+  }
+
+  .mini-chess {
+    font-size: 1.2rem;
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  /* Opponent history chip */
+  .opp-chip {
+    display: inline-block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin: 1px;
+    background: rgba(255,255,255,0.06);
+    color: var(--warm-gray);
+  }
+
+  .result-indicator {
+    font-size: 0.7rem;
+    display: inline-block;
+    margin-left: 2px;
+  }
+
+  .ri-w { color: #7BC4AA; }
+  .ri-d { color: var(--gold); }
+  .ri-l { color: #e07070; }
+
+  /* ---- Mass Upload ---- */
+  .upload-zone {
+    border: 2px dashed rgba(201,168,76,0.3);
+    border-radius: 10px;
+    padding: 28px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: rgba(201,168,76,0.03);
+    position: relative;
+  }
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--gold);
+    background: rgba(201,168,76,0.07);
+  }
+  .upload-zone input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .upload-icon { font-size: 2rem; display: block; margin-bottom: 8px; }
+  .upload-hint { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; letter-spacing: 0.08em; color: var(--warm-gray); }
+  .upload-hint strong { color: var(--gold); }
+
+  /* Modal */
+  .modal-backdrop {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(10,8,7,0.85);
+    backdrop-filter: blur(4px);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: #221C18;
+    border: 1px solid rgba(201,168,76,0.25);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 640px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+  }
+  .modal-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .modal-title { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; color: var(--gold); }
+  .modal-close { background: none; border: none; color: var(--warm-gray); font-size: 1.3rem; cursor: pointer; line-height: 1; padding: 4px 8px; border-radius: 4px; }
+  .modal-close:hover { color: var(--ivory); background: rgba(255,255,255,0.07); }
+  .modal-body { padding: 20px 24px; overflow-y: auto; flex: 1; }
+  .modal-footer { padding: 16px 24px; border-top: 1px solid rgba(255,255,255,0.07); display: flex; gap: 10px; justify-content: flex-end; flex-shrink: 0; }
+
+  .preview-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 12px; }
+  .preview-table th { font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--warm-gray); padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.08); text-align: left; }
+  .preview-table td { padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .preview-table tr.row-err td { background: rgba(180,60,60,0.08); color: #e07070; }
+  .preview-table tr.row-dup td { background: rgba(201,168,76,0.07); color: var(--gold); }
+  .preview-table tr.row-ok td { }
+  .row-status { font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; }
+
+  .paste-area {
+    width: 100%;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 12px 14px;
+    color: var(--ivory);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.82rem;
+    line-height: 1.6;
+    resize: vertical;
+    min-height: 140px;
+    outline: none;
+  }
+  .paste-area:focus { border-color: var(--gold); }
+
+  .format-hint {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--warm-gray);
+    line-height: 1.8;
+    margin-bottom: 14px;
+  }
+  .format-hint strong { color: var(--gold); display: block; margin-bottom: 4px; }
+
+  .parse-summary { font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; margin: 10px 0 4px; }
+  .parse-summary .ok { color: #7BC4AA; }
+  .parse-summary .skip { color: #e07070; }
+
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+<div class="app">
+  <header>
+    <span class="crown">♔</span>
+    <h1>Swiss <span>Chess</span> Tournament</h1>
+    <p class="subtitle">Swiss System · Score-First Pairing · Color Alternation</p>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('setup')">① Setup</button>
+    <button class="tab" onclick="switchTab('rounds')">② Rounds</button>
+    <button class="tab" onclick="switchTab('standings')">③ Standings</button>
+  </div>
+
+  <!-- SETUP PANEL -->
+  <div id="tab-setup" class="panel active">
+    <p class="section-title">Tournament Settings</p>
+    <div class="card">
+      <div class="setup-grid">
+        <div>
+          <label>Tournament Name</label>
+          <input type="text" id="tournamentName" value="SG Chess Tournament 2026" />
+        </div>
+        <div>
+          <label>Number of Rounds</label>
+          <input type="number" id="numRounds" value="5" min="1" max="20" />
+        </div>
+      </div>
+    </div>
+
+    <p class="section-title">Add Players</p>
+    <div class="card">
+      <div class="setup-grid">
+        <div>
+          <label>Player Name</label>
+          <input type="text" id="playerName" placeholder="Enter player name" />
+        </div>
+        <div>
+          <label>Clan</label>
+          <select id="playerClan">
+            <option value="A">Clan A — Rashtrakutas</option>
+            <option value="B">Clan B — Cholas</option>
+            <option value="C">Clan C — Mauryas</option>
+            <option value="D">Clan D — Chalukyas</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="btn btn-gold" onclick="addPlayer()">+ Add Player</button>
+        <button class="btn btn-outline" onclick="openUploadModal()">⬆ Mass Upload</button>
+        <button class="btn btn-outline" onclick="addSamplePlayers()">Load Sample Players</button>
+        <button class="btn btn-danger" onclick="clearPlayers()">Clear All</button>
+      </div>
+    </div>
+
+    <p class="section-title">Registered Players (<span id="playerCount">0</span>)</p>
+    <div id="playerList" class="player-list">
+      <div class="no-data"><span class="mini-chess">♟</span>No players yet. Add players above.</div>
+    </div>
+
+    <div style="margin-top:24px; display:flex; align-items:center; justify-content:center; gap:14px; flex-wrap:wrap;">
+      <button class="btn btn-gold" style="padding:14px 36px; font-size:0.9rem;" onclick="startTournament()">Start Tournament ♞</button>
+      <button id="resetBtn" class="btn btn-danger" style="display:none; padding:14px 24px;" onclick="resetTournament()">↺ Reset Tournament</button>
+    </div>
+    <div id="saveStatus" style="text-align:center; margin-top:12px; font-family:'IBM Plex Mono',monospace; font-size:0.68rem; letter-spacing:0.1em; color:var(--warm-gray); opacity:0; transition:opacity 0.5s;">
+      ✓ Progress saved
+    </div>
+  </div>
+
+  <!-- ROUNDS PANEL -->
+  <div id="tab-rounds" class="panel">
+    <div id="roundsContent">
+      <div class="no-data"><span class="mini-chess">♟</span>Tournament not started yet.</div>
+    </div>
+  </div>
+
+  <!-- STANDINGS PANEL -->
+  <div id="tab-standings" class="panel">
+    <div style="display:flex; justify-content:flex-end; margin-bottom:16px;">
+      <button class="btn btn-gold" onclick="exportToExcel()" id="exportBtn" style="display:none;">
+        ⬇ Export to Excel
+      </button>
+    </div>
+    <div id="standingsContent">
+      <div class="no-data"><span class="mini-chess">♟</span>Tournament not started yet.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===================== STATE =====================
+let state = {
+  players: [],
+  rounds: [],      // array of rounds; each round = array of pairings
+  currentRound: 0, // 1-based, 0 = not started
+  numRounds: 5,
+  tournamentName: '',
+  started: false
+};
+
+const CLANS = { A:'Rashtrakutas', B:'Cholas', C:'Mauryas', D:'Chalukyas' };
+const CLAN_COLORS = { A:'clan-A', B:'clan-B', C:'clan-C', D:'clan-D' };
+
+// ===================== PLAYER MANAGEMENT =====================
+function addPlayer() {
+  const name = document.getElementById('playerName').value.trim();
+  const clan = document.getElementById('playerClan').value;
+  if (!name) { showAlert('Please enter a player name.', 'err'); return; }
+  if (state.started) { showAlert('Cannot add players after tournament has started.', 'err'); return; }
+  if (state.players.find(p => p.name.toLowerCase() === name.toLowerCase())) {
+    showAlert('A player with that name already exists.', 'err'); return;
+  }
+  state.players.push({
+    id: Date.now() + Math.random(),
+    name, clan,
+    score: 0, wins: 0, colorDebt: 0,
+    colorHistory: [],   // 'W' or 'B' each round
+    opponents: [],      // ids of past opponents
+    results: [],        // 'W','D','L','bye' per round
+    buchholz: 0,
+    receivedBye: false
+  });
+  document.getElementById('playerName').value = '';
+  renderPlayerList();
+  saveState();
+  document.getElementById('resetBtn').style.display = 'inline-flex';
+}
+
+function removePlayer(id) {
+  if (state.started) return;
+  state.players = state.players.filter(p => p.id !== id);
+  renderPlayerList();
+  saveState();
+}
+
+function clearPlayers() {
+  if (state.started) return;
+  state.players = [];
+  renderPlayerList();
+  saveState();
+}
+
+function addSamplePlayers() {
+  if (state.started) return;
+    const samples = [
+    ['Aryan Shah','A'], ['Bela Novak','A'], ['Carlos Vega','A'],
+    ['Diana Chen','B'], ['Ethan Park','B'], ['Fatima Al-Rashid','B'],
+    ['Georgios Papadopoulos','C'], ['Hana Müller','C'], ['Irina Kozlov','C'],
+    ['Jamal Okafor','D'], ['Kiran Patel','D'], ['Layla Hassan','D']
+  ];
+  samples.forEach(([name, clan]) => {
+    if (!state.players.find(p => p.name === name)) {
+      state.players.push({
+        id: Date.now() + Math.random(),
+        name, clan,
+        score: 0, wins: 0, colorDebt: 0, colorHistory: [], opponents: [], results: [],
+        buchholz: 0, receivedBye: false
+      });
+    }
+  });
+  renderPlayerList();
+  saveState();
+  document.getElementById('resetBtn').style.display = 'inline-flex';
+}
+
+function renderPlayerList() {
+  const count = state.players.length;
+  document.getElementById('playerCount').textContent = count;
+  const el = document.getElementById('playerList');
+  if (count === 0) {
+    el.innerHTML = '<div class="no-data"><span class="mini-chess">♟</span>No players yet. Add players above.</div>';
+    return;
+  }
+  el.innerHTML = state.players.map((p, i) => `
+    <div class="player-item">
+      <span class="player-rank">${i+1}</span>
+      <div class="clan-dot" style="background:${getClanColor(p.clan)}"></div>
+      <span class="player-name">${escHtml(p.name)}</span>
+      <span class="clan-badge ${CLAN_COLORS[p.clan]}">${p.clan} · ${CLANS[p.clan]}</span>
+      ${!state.started ? `<button class="btn btn-danger btn-sm" onclick="removePlayer(${p.id})">✕</button>` : ''}
+    </div>`).join('');
+}
+
+function getClanColor(clan) {
+  return {A:'#C9A84C',B:'#4A7C6B',C:'#6B4A7C',D:'#7C4A4A'}[clan] || '#888';
+}
+
+// ===================== TOURNAMENT LOGIC =====================
+function startTournament() {
+  if (state.players.length < 2) { showAlert('Need at least 2 players to start.', 'err'); return; }
+  state.numRounds = parseInt(document.getElementById('numRounds').value) || 5;
+  state.tournamentName = document.getElementById('tournamentName').value.trim() || 'Chess Tournament';
+  state.started = true;
+  state.currentRound = 0;
+  state.rounds = [];
+  // Reset all player stats
+  state.players.forEach(p => {
+    p.score = 0; p.colorHistory = []; p.opponents = [];
+    p.results = []; p.buchholz = 0; p.receivedBye = false;
+  });
+  generateNextRound();
+  switchTab('rounds');
+  renderPlayerList();
+  saveState();
+  document.getElementById('resetBtn').style.display = 'inline-flex';
+}
+
+function generateNextRound() {
+  if (state.currentRound >= state.numRounds) return;
+  state.currentRound++;
+  recalculateAllScores(); // ensure colorHistory is fresh before pairing
+  const pairings = swissPairing();
+  state.rounds.push({ number: state.currentRound, pairings, completed: false });
+  renderRoundsPanel();
+  renderStandings();
+  saveState();
+}
+
+// Swiss pairing algorithm
+function swissPairing() {
+  // Sort by score desc, then Buchholz desc, then wins desc, then name
+  const sorted = [...state.players].sort((a, b) =>
+    b.score - a.score || b.buchholz - a.buchholz || b.wins - a.wins || a.name.localeCompare(b.name)
+  );
+
+  const paired = new Set();
+  const pairings = [];
+  let byePlayer = null;
+
+  // Odd players: assign bye to lowest-ranked player who hasn't had one
+  if (sorted.length % 2 !== 0) {
+    for (let i = sorted.length - 1; i >= 0; i--) {
+      if (!sorted[i].receivedBye) {
+        byePlayer = sorted[i];
+        paired.add(byePlayer.id);
+        break;
+      }
+    }
+    if (!byePlayer) {
+      byePlayer = sorted[sorted.length - 1];
+      paired.add(byePlayer.id);
+    }
+    pairings.push({ type: 'bye', player: byePlayer, white: null, black: null, result: 'bye' });
+  }
+
+  // Pair remaining players greedily with backtracking
+  const useClan = (state.currentRound === 1); // Clan-aware only in Round 1
+  let unpaired = sorted.filter(p => !paired.has(p.id));
+
+  // Round 1 (or any clan-aware round): interleave by clan first so the greedy
+  // algorithm never clusters same-clan players at the tail and is forced to pair them.
+  if (useClan) {
+    const clanGroups = {};
+    unpaired.forEach(p => { (clanGroups[p.clan] = clanGroups[p.clan] || []).push(p); });
+    const clans = Object.keys(clanGroups).sort((a,b) => clanGroups[b].length - clanGroups[a].length);
+    const maxLen = Math.max(...clans.map(c => clanGroups[c].length));
+    const interleaved = [];
+    for (let i = 0; i < maxLen; i++)
+      clans.forEach(c => { if (i < clanGroups[c].length) interleaved.push(clanGroups[c][i]); });
+    unpaired = interleaved;
+  }
+
+  pairGreedy(unpaired, pairings, useClan);
+
+  return pairings;
+}
+
+// Returns colour preference: 'W' needs white, 'B' needs black, 'N' neutral
+function colorPref(p) {
+  const w = p.colorHistory.filter(c => c === 'W').length;
+  const b = p.colorHistory.filter(c => c === 'B').length;
+  const last = p.colorHistory.filter(c => c === 'W' || c === 'B').slice(-1)[0];
+  if (w < b) return 'W';
+  if (b < w) return 'B';
+  if (last === 'W') return 'B';
+  if (last === 'B') return 'W';
+  return 'N';
+}
+
+// Score colour compatibility: lower = better pairing
+function colorCompat(p1, p2) {
+  const a = colorPref(p1), b = colorPref(p2);
+  if (a === 'N' || b === 'N') return 1;
+  if (a !== b) return 0;   // complementary — perfect
+  return 2;                // both want same colour — conflict
+}
+
+function pairGreedy(players, pairings, useClan) {
+  if (players.length === 0) return true;
+  const p1 = players[0];
+  const rest = players.slice(1);
+
+  const neverPlayed   = rest.filter(p => !p1.opponents.includes(p.id));
+  const alreadyPlayed = rest.filter(p =>  p1.opponents.includes(p.id));
+
+  // Within each tier, prefer opponents with complementary colour needs
+  const byCompat = arr => [...arr].sort((a, b) => colorCompat(p1, a) - colorCompat(p1, b));
+
+  let ordered;
+  if (useClan) {
+    // Round 1: clan separation first, colour compat as tiebreaker within tier
+    ordered = [
+      ...byCompat(neverPlayed.filter(p => p.clan !== p1.clan)),
+      ...byCompat(neverPlayed.filter(p => p.clan === p1.clan)),
+      ...byCompat(alreadyPlayed.filter(p => p.clan !== p1.clan)),
+      ...byCompat(alreadyPlayed.filter(p => p.clan === p1.clan)),
+    ];
+  } else {
+    // Round 2+: Swiss principle — score proximity PRIMARY, colour compat SECONDARY
+    // Players within 0.5 pts are in the same "score bracket" and sorted by colour compat.
+    // Beyond that, closer score always wins regardless of colour.
+    const byScoreAndCompat = arr => [...arr].sort((a, b) => {
+      const sdA = Math.abs(p1.score - a.score);
+      const sdB = Math.abs(p1.score - b.score);
+      // Same bracket (within 0.5 pts): colour compat decides
+      const sameBracket = Math.abs(sdA - sdB) <= 0.5;
+      if (sameBracket) {
+        const cc = colorCompat(p1, a) - colorCompat(p1, b);
+        if (cc !== 0) return cc;
+      }
+      return sdA - sdB; // closer score wins
+    });
+    ordered = [
+      ...byScoreAndCompat(neverPlayed),
+      ...byScoreAndCompat(alreadyPlayed),
+    ];
+  }
+
+  for (const p2 of ordered) {
+    const [white, black] = assignColors(p1, p2);
+    const isRematch = p1.opponents.includes(p2.id);
+    pairings.push({
+      type: 'game', white, black, result: null,
+      sameClan: p1.clan === p2.clan,
+      rematch: isRematch
+    });
+    const remaining = rest.filter(p => p.id !== p2.id);
+    if (pairGreedy(remaining, pairings, useClan)) return true;
+    pairings.pop();
+  }
+
+  return false;
+}
+
+function assignColors(p1, p2) {
+  const p1W = p1.colorHistory.filter(c => c === 'W').length;
+  const p1B = p1.colorHistory.filter(c => c === 'B').length;
+  const p2W = p2.colorHistory.filter(c => c === 'W').length;
+  const p2B = p2.colorHistory.filter(c => c === 'B').length;
+
+  const p1Diff = p1W - p1B; // positive = more whites, negative = more blacks
+  const p2Diff = p2W - p2B;
+
+  const p1Last = p1.colorHistory.filter(c => c === 'W' || c === 'B').slice(-1)[0];
+  const p2Last = p2.colorHistory.filter(c => c === 'W' || c === 'B').slice(-1)[0];
+
+  const p1Debt = p1.colorDebt || 0; // +ve = owed white, -ve = owed black
+  const p2Debt = p2.colorDebt || 0;
+
+  let p1GetsWhite;
+
+  // Priority 1: fix the bigger imbalance (more blacks = owed white)
+  if (p1Diff !== p2Diff) {
+    p1GetsWhite = p1Diff < p2Diff;
+  }
+  // Priority 2: enforce alternation (last was B → give W now)
+  else if (p1Last !== p2Last) {
+    p1GetsWhite = p1Last === 'B';
+  }
+  // Priority 3: use color debt — who is owed white more
+  else if (p1Debt !== p2Debt) {
+    p1GetsWhite = p1Debt > p2Debt;
+  }
+  // Priority 4: fewer whites overall
+  else if (p1W !== p2W) {
+    p1GetsWhite = p1W < p2W;
+  }
+  // Priority 5: truly equal — random
+  else {
+    p1GetsWhite = Math.random() < 0.5;
+  }
+
+  return p1GetsWhite ? [p1, p2] : [p2, p1];
+}
+
+// ===================== RESULT ENTRY =====================
+function setResult(roundIdx, pairingIdx, result) {
+  const round = state.rounds[roundIdx];
+  if (!round || round.locked) return; // locked rounds cannot be edited
+  const pairing = round.pairings[pairingIdx];
+  if (pairing.type === 'bye') return;
+  pairing.result = result;
+
+  // If this round was tentatively completed, regenerate the tentative next round
+  if (round.completed) {
+    regenerateTentativeNext(roundIdx);
+  }
+
+  saveState();
+  renderRoundsPanel();
+  renderStandings();
+}
+
+function checkAndFinalizeRound(roundIdx) {
+  // No-op: round completion is now triggered manually via the Complete Round button.
+  // This function is kept to avoid breaking any call sites.
+}
+
+function recalculateAllScores() {
+  // Reset
+  state.players.forEach(p => {
+    p.score = 0; p.wins = 0; p.colorDebt = 0; p.colorHistory = []; p.opponents = []; p.results = [];
+    p.receivedBye = false;
+  });
+
+  state.rounds.forEach(round => {
+    if (!round.completed) return; // only process rounds that have been tentatively or finally completed
+    round.pairings.forEach(pairing => {
+      if (pairing.type === 'bye') {
+        const p = findPlayer(pairing.player.id);
+        if (p) { p.score += 1; p.receivedBye = true; p.results.push('bye'); p.colorHistory.push('bye'); }
+      } else {
+        const w = findPlayer(pairing.white.id);
+        const b = findPlayer(pairing.black.id);
+        if (!w || !b) return;
+        w.colorHistory.push('W');
+        b.colorHistory.push('B');
+        w.colorDebt = (w.colorDebt || 0) - 1; // played white, now owed black
+        b.colorDebt = (b.colorDebt || 0) + 1; // played black, now owed white
+        w.opponents.push(b.id);
+        b.opponents.push(w.id);
+        if (pairing.result === 'white') {
+          w.score += 1; w.wins += 1; w.results.push('W'); b.results.push('L');
+        } else if (pairing.result === 'black') {
+          b.score += 1; b.wins += 1; w.results.push('L'); b.results.push('W');
+        } else if (pairing.result === 'draw') {
+          w.score += 0.5; b.score += 0.5; w.results.push('D'); b.results.push('D');
+        } else if (pairing.result === 'forfeit') {
+          // Both forfeit — 0 points each, opponents still tracked for Buchholz
+          w.results.push('F'); b.results.push('F');
+        }
+      }
+    });
+  });
+
+  // Calculate Buchholz
+  state.players.forEach(p => {
+    p.buchholz = p.opponents.reduce((sum, oppId) => {
+      const opp = findPlayer(oppId);
+      return sum + (opp ? opp.score : 0);
+    }, 0);
+  });
+}
+
+function findPlayer(id) {
+  return state.players.find(p => p.id == id);
+}
+
+// ===================== RENDERING =====================
+function renderRoundsPanel() {
+  const el = document.getElementById('roundsContent');
+  if (!state.started || state.rounds.length === 0) {
+    el.innerHTML = '<div class="no-data"><span class="mini-chess">♟</span>Tournament not started yet.</div>';
+    return;
+  }
+
+  // Show stats
+  let html = `<div class="stats-row">
+    <div class="stat-box"><div class="stat-val">${state.players.length}</div><div class="stat-lbl">Players</div></div>
+    <div class="stat-box"><div class="stat-val">${state.currentRound}/${state.numRounds}</div><div class="stat-lbl">Round</div></div>
+    <div class="stat-box"><div class="stat-val">${state.rounds.filter(r=>r.completed).length}</div><div class="stat-lbl">Completed</div></div>
+    <div class="stat-box"><div class="stat-val">${Object.keys(CLANS).length}</div><div class="stat-lbl">Clans</div></div>
+  </div>`;
+
+  // Show rounds from current to first
+  const roundsToShow = [...state.rounds].reverse();
+
+  roundsToShow.forEach(round => {
+    const isLast = round.number === state.rounds.length;
+    const isLocked = !!round.locked;
+    const isTentative = round.completed && !isLocked;
+    const isInProgress = !round.completed;
+    const allResultsIn = round.pairings.every(p => p.result !== null);
+    const ri = round.number - 1;
+
+    let statusBadge;
+    if (isLocked) {
+      statusBadge = '<span class="round-badge" style="color:#7BC4AA;border-color:rgba(123,196,170,0.35)">🔒 Locked</span>';
+    } else if (isTentative) {
+      statusBadge = '<span class="round-badge" style="color:var(--gold);border-color:rgba(201,168,76,0.4)">⏳ Tentative</span>';
+    } else {
+      statusBadge = '<span class="round-badge" style="color:var(--warm-gray);border-color:rgba(138,130,120,0.3)">In Progress</span>';
+    }
+
+    html += `<div class="round-header">
+      <div class="round-title">Round ${round.number}</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        ${statusBadge}
+        ${!isLocked && isInProgress ? `<button class="btn btn-gold btn-sm" onclick="completeRound(${ri})"
+          ${allResultsIn ? '' : 'disabled title="Enter all results first"'}>✓ Complete Round</button>` : ''}
+        ${!isLocked && isTentative ? `
+          <button class="btn btn-outline btn-sm" onclick="completeRound(${ri})"
+            ${allResultsIn ? '' : 'disabled title="Enter all results first"'}>↺ Re-complete</button>
+          <button class="btn btn-gold btn-sm" style="background:var(--mahogany);border:1px solid rgba(201,168,76,0.4);" onclick="finallyCompleteRound(${ri})">🔒 Finally Complete</button>
+        ` : ''}
+      </div>
+    </div>`;
+
+    round.pairings.forEach((pairing, pi) => {
+      const ri = round.number - 1;
+      if (pairing.type === 'bye') {
+        const p = findPlayer(pairing.player.id) || pairing.player;
+        html += `<div class="pairing-card bye-card">
+          <div class="bye-player">${escHtml(p.name)}</div>
+          <div class="bye-text">⭐ BYE — Full point awarded (1.0)</div>
+        </div>`;
+      } else {
+        const w = findPlayer(pairing.white.id) || pairing.white;
+        const b = findPlayer(pairing.black.id) || pairing.black;
+        const clanWarning = pairing.sameClan ? '⚠ Same clan (unavoidable)' : '';
+        const rematchWarning = pairing.rematch ? '🔁 Rematch (unavoidable)' : '';
+        html += `<div class="pairing-card">
+          <div class="pairing-player">
+            <span class="pairing-player-name">${escHtml(w.name)}</span>
+            <div class="pairing-player-meta">
+              <span class="color-chip white-chip">♔ WHITE</span>
+              <span class="clan-badge ${CLAN_COLORS[w.clan]}">${w.clan}</span>
+              <span style="font-size:0.75rem;color:var(--gold)">${w.score}pt</span>
+            </div>
+          </div>
+          <div class="pairing-center">
+            <span class="vs-label">vs</span>
+            <span class="board-num">Board ${pi + (pairing.type === 'bye' ? 0 : 1) - round.pairings.filter((p,j) => j < pi && p.type === 'bye').length}</span>
+            ${clanWarning ? `<span style="font-size:0.65rem;color:#e07070">${clanWarning}</span>` : ''}
+            ${rematchWarning ? `<span style="font-size:0.65rem;color:#e07070">${rematchWarning}</span>` : ''}
+            ${!round.locked ? `<div class="result-buttons">
+              <button class="result-btn res-white ${pairing.result==='white'?'selected':''}" onclick="setResult(${ri},${pi},'white')">1-0</button>
+              <button class="result-btn res-draw ${pairing.result==='draw'?'selected':''}" onclick="setResult(${ri},${pi},'draw')">½-½</button>
+              <button class="result-btn res-black ${pairing.result==='black'?'selected':''}" onclick="setResult(${ri},${pi},'black')">0-1</button>
+              <button class="result-btn res-forfeit ${pairing.result==='forfeit'?'selected':''}" onclick="setResult(${ri},${pi},'forfeit')" title="Both players forfeit — 0-0">0-0</button>
+            </div>` : `<div style="margin-top:4px;font-family:'IBM Plex Mono',monospace;font-size:0.85rem;color:var(--gold)">
+              ${pairing.result === 'white' ? '1 – 0' : pairing.result === 'black' ? '0 – 1' : pairing.result === 'forfeit' ? '0 – 0 (Forfeit)' : '½ – ½'}
+            </div>`}
+            ${round.locked ? '<span style="font-size:0.62rem;color:rgba(123,196,170,0.5);font-family:IBM Plex Mono,monospace;letter-spacing:0.05em">🔒 locked</span>' : round.completed ? '<span style="font-size:0.62rem;color:rgba(201,168,76,0.4);font-family:IBM Plex Mono,monospace;letter-spacing:0.05em">editable</span>' : ''}
+          </div>
+          <div class="pairing-player right">
+            <span class="pairing-player-name">${escHtml(b.name)}</span>
+            <div class="pairing-player-meta">
+              <span style="font-size:0.75rem;color:var(--gold)">${b.score}pt</span>
+              <span class="clan-badge ${CLAN_COLORS[b.clan]}">${b.clan}</span>
+              <span class="color-chip black-chip">♚ BLACK</span>
+            </div>
+          </div>
+        </div>`;
+      }
+    });
+  });
+
+  el.innerHTML = html;
+}
+
+function renderStandings() {
+  const el = document.getElementById('standingsContent');
+  const exportBtn = document.getElementById('exportBtn');
+  if (!state.started) {
+    el.innerHTML = '<div class="no-data"><span class="mini-chess">♟</span>Tournament not started yet.</div>';
+    if (exportBtn) exportBtn.style.display = 'none';
+    return;
+  }
+  if (exportBtn) exportBtn.style.display = state.rounds.length > 0 ? 'inline-flex' : 'none';
+
+  const sorted = [...state.players].sort((a, b) =>
+    b.score - a.score || b.buchholz - a.buchholz || b.wins - a.wins || a.name.localeCompare(b.name)
+  );
+
+  let html = `<div class="stats-row">
+    <div class="stat-box"><div class="stat-val">${state.players.length}</div><div class="stat-lbl">Players</div></div>
+    <div class="stat-box"><div class="stat-val">${state.currentRound}/${state.numRounds}</div><div class="stat-lbl">Round</div></div>
+    <div class="stat-box"><div class="stat-val">${sorted[0]?.score || 0}</div><div class="stat-lbl">Top Score</div></div>
+  </div>`;
+
+  // Clan summary
+  html += `<p class="section-title">Clan Overview</p>
+  <div class="card" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;">`;
+  Object.keys(CLANS).forEach(clan => {
+    const members = sorted.filter(p => p.clan === clan);
+    const total = members.reduce((s,p) => s + p.score, 0);
+    html += `<div style="text-align:center;">
+      <div style="width:12px;height:12px;border-radius:50%;background:${getClanColor(clan)};margin:0 auto 6px"></div>
+      <div style="font-size:0.75rem;color:var(--warm-gray);font-family:'IBM Plex Mono',monospace;letter-spacing:0.08em">${clan} · ${CLANS[clan]}</div>
+      <div style="font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--gold)">${total}</div>
+      <div style="font-size:0.7rem;color:var(--warm-gray)">${members.length} players</div>
+    </div>`;
+  });
+  html += `</div>`;
+
+  html += `<p class="section-title" style="margin-top:20px">Individual Standings</p>
+  <div class="card" style="padding:0;overflow:hidden;">
+  <table class="standings-table">
+    <thead>
+      <tr>
+        <th class="pos">#</th>
+        <th>Player</th>
+        <th>Clan</th>
+        <th>Score</th>
+        <th>Total Opp Score</th>
+        <th>Colors</th>
+        <th>Results</th>
+      </tr>
+    </thead>
+    <tbody>`;
+
+  sorted.forEach((p, i) => {
+    const colorDots = p.colorHistory.map(c => {
+      if (c === 'W') return '<span class="ch-dot w" title="White"></span>';
+      if (c === 'B') return '<span class="ch-dot b" title="Black"></span>';
+      return '<span class="ch-dot bye" title="Bye"></span>';
+    }).join('');
+
+    const resultDots = p.results.map(r => {
+      if (r === 'W') return '<span class="result-indicator ri-w" title="Win">●</span>';
+      if (r === 'D') return '<span class="result-indicator ri-d" title="Draw">◐</span>';
+      if (r === 'L') return '<span class="result-indicator ri-l" title="Loss">○</span>';
+      if (r === 'bye') return '<span class="result-indicator ri-d" title="Bye">★</span>';
+      if (r === 'F') return '<span class="result-indicator" style="color:#e07070" title="Forfeit">✕</span>';
+      return '';
+    }).join('');
+
+    const medal = i === 0 && state.rounds.filter(r=>r.completed).length > 0 ? '🥇 ' : i === 1 ? '🥈 ' : i === 2 ? '🥉 ' : '';
+
+    html += `<tr>
+      <td class="pos">${i+1}</td>
+      <td><strong>${medal}${escHtml(p.name)}</strong></td>
+      <td><span class="clan-badge ${CLAN_COLORS[p.clan]}">${p.clan}</span></td>
+      <td class="score">${p.score}</td>
+      <td style="font-family:'IBM Plex Mono',monospace;font-size:0.8rem;color:var(--ivory)">${p.buchholz.toFixed(1)}</td>
+      <td><div class="color-history">${colorDots}</div></td>
+      <td>${resultDots}</td>
+    </tr>`;
+  });
+
+  html += `</tbody></table></div>`;
+  el.innerHTML = html;
+}
+
+// ===================== PERSISTENCE =====================
+const STORAGE_KEY = 'sg-chess-tournament-2026';
+
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    const el = document.getElementById('saveStatus');
+    if (el) { el.style.opacity = '1'; setTimeout(() => el.style.opacity = '0', 2000); }
+  } catch(e) { console.warn('Save failed:', e); }
+}
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      Object.assign(state, JSON.parse(saved));
+      return true;
+    }
+  } catch(e) { /* no saved state */ }
+  return false;
+}
+
+function resetTournament() {
+  if (!confirm('Reset the entire tournament? All results and pairings will be lost.')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  state.players = [];
+  state.rounds = [];
+  state.currentRound = 0;
+  state.started = false;
+  state.tournamentName = 'SG Chess Tournament 2026';
+  state.numRounds = 5;
+  document.getElementById('tournamentName').value = state.tournamentName;
+  document.getElementById('numRounds').value = state.numRounds;
+  document.getElementById('resetBtn').style.display = 'none';
+  renderPlayerList();
+  renderRoundsPanel();
+  renderStandings();
+  switchTab('setup');
+  showAlert('Tournament has been reset.', 'warn');
+}
+
+// Boot: restore saved state on page load
+(function() {
+  const restored = loadState();
+  if (restored && state.started) {
+    document.getElementById('tournamentName').value = state.tournamentName || 'SG Chess Tournament 2026';
+    document.getElementById('numRounds').value = state.numRounds || 5;
+    renderPlayerList();
+    renderRoundsPanel();
+    renderStandings();
+    switchTab('rounds');
+    document.getElementById('resetBtn').style.display = 'inline-flex';
+    showAlert('Tournament resumed from saved state.', 'info');
+  } else if (restored && state.players.length > 0) {
+    document.getElementById('tournamentName').value = state.tournamentName || 'SG Chess Tournament 2026';
+    document.getElementById('numRounds').value = state.numRounds || 5;
+    renderPlayerList();
+    document.getElementById('resetBtn').style.display = 'inline-flex';
+  }
+})();
+
+// ===================== UI =====================
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    t.classList.toggle('active', ['setup','rounds','standings'][i] === tab);
+  });
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+}
+
+function showAlert(msg, type='info') {
+  const icons = { info: 'ℹ', warn: '⚠', err: '✕' };
+  const classes = { info: 'alert-info', warn: 'alert-warn', err: 'alert-err' };
+  const div = document.createElement('div');
+  div.className = `alert ${classes[type]}`;
+  div.innerHTML = `<span>${icons[type]}</span><span>${escHtml(msg)}</span>`;
+  document.querySelector('.app').insertBefore(div, document.querySelector('.tabs'));
+  setTimeout(() => div.remove(), 3500);
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ===================== MANUAL ROUND COMPLETION =====================
+function completeRound(roundIdx) {
+  const round = state.rounds[roundIdx];
+  if (!round || round.locked) return;
+  const pending = round.pairings.filter(p => p.result === null);
+  if (pending.length > 0) {
+    showAlert(`${pending.length} result(s) still missing. Enter all results before completing.`, 'warn');
+    return;
+  }
+  round.completed = true;
+  recalculateAllScores();
+  saveState();
+  // Generate tentative next round if not already there
+  if (state.currentRound < state.numRounds && state.rounds.length === roundIdx + 1) {
+    setTimeout(() => {
+      generateNextRound();
+      renderRoundsPanel();
+      renderStandings();
+    }, 300);
+  } else {
+    renderRoundsPanel();
+    renderStandings();
+    if (state.currentRound >= state.numRounds && roundIdx === state.rounds.length - 1) {
+      showAlert('All results entered. Click "Finally Complete" to lock and finish.', 'info');
+    }
+  }
+}
+
+function finallyCompleteRound(roundIdx) {
+  const round = state.rounds[roundIdx];
+  if (!round || round.locked) return;
+  if (!round.completed) {
+    showAlert('Complete the round first before locking it.', 'warn');
+    return;
+  }
+  const pending = round.pairings.filter(p => p.result === null);
+  if (pending.length > 0) {
+    showAlert(`${pending.length} result(s) still missing.`, 'warn');
+    return;
+  }
+  if (!confirm(`Lock Round ${round.number} permanently? Results cannot be changed after this.`)) return;
+  round.locked = true;
+  recalculateAllScores();
+  saveState();
+  renderRoundsPanel();
+  renderStandings();
+  if (state.currentRound >= state.numRounds && state.rounds.every(r => r.locked)) {
+    showAlert('🏆 Tournament complete and locked! Check the Standings tab.', 'info');
+  }
+}
+
+function regenerateTentativeNext(roundIdx) {
+  // After editing a completed-but-not-locked round, drop and regenerate the tentative next round
+  const nextIdx = roundIdx + 1;
+  if (nextIdx < state.rounds.length && !state.rounds[nextIdx].locked) {
+    state.rounds.splice(nextIdx, state.rounds.length - nextIdx);
+    state.currentRound = roundIdx + 1;
+  }
+  recalculateAllScores(); // must run before generateNextRound so colorHistory is accurate
+  if (state.currentRound < state.numRounds) {
+    generateNextRound();
+  }
+}
+
+// ===================== MASS UPLOAD =====================
+let _uploadParsed = [];
+
+function openUploadModal() {
+  if (state.started) { showAlert('Cannot add players after tournament has started.', 'err'); return; }
+  document.getElementById('uploadModal').classList.add('open');
+  document.getElementById('pasteArea').value = '';
+  document.getElementById('previewWrap').style.display = 'none';
+  document.getElementById('parseSummary').style.display = 'none';
+  document.getElementById('confirmUploadBtn').style.display = 'none';
+  _uploadParsed = [];
+}
+
+function closeUploadModal() {
+  document.getElementById('uploadModal').classList.remove('open');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  // Close modal on backdrop click
+  document.getElementById('uploadModal').addEventListener('click', function(e) {
+    if (e.target === this) closeUploadModal();
+  });
+  // Drag & drop on upload zone
+  const _zone = document.getElementById('uploadZone');
+  _zone.addEventListener('dragover', e => { e.preventDefault(); _zone.classList.add('drag-over'); });
+  _zone.addEventListener('dragleave', () => _zone.classList.remove('drag-over'));
+  _zone.addEventListener('drop', e => {
+    e.preventDefault();
+    _zone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) _readFile(file);
+  });
+});
+
+function handleFileUpload(e) {
+  const file = e.target.files[0];
+  if (file) _readFile(file);
+  e.target.value = '';
+}
+
+function _readFile(file) {
+  const reader = new FileReader();
+  reader.onload = ev => {
+    document.getElementById('pasteArea').value = ev.target.result;
+    parseUploadPreview();
+  };
+  reader.readAsText(file);
+}
+
+const CLAN_NAME_MAP = {
+  'a':'A','b':'B','c':'C','d':'D',
+  'rashtrakutas':'A','rashtrakuta':'A',
+  'cholas':'B','chola':'B',
+  'mauryas':'C','maurya':'C',
+  'chalukyas':'D','chalukya':'D'
+};
+
+function _parseClan(raw) {
+  if (!raw) return null;
+  return CLAN_NAME_MAP[raw.trim().toLowerCase()] || null;
+}
+
+function parseUploadPreview() {
+  const text = document.getElementById('pasteArea').value.trim();
+  if (!text) { showAlert('Nothing to parse. Paste some players first.', 'warn'); return; }
+
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  _uploadParsed = [];
+
+  lines.forEach((line, i) => {
+    const parts = line.split(/,|\t/).map(s => s.trim()).filter(Boolean);
+    if (parts.length < 2) {
+      _uploadParsed.push({ line: i+1, raw: line, name: null, clan: null, status: 'err', msg: 'Missing clan' });
+      return;
+    }
+    const name = parts[0];
+    const clan = _parseClan(parts[1]);
+    if (!name) {
+      _uploadParsed.push({ line: i+1, raw: line, name: null, clan: null, status: 'err', msg: 'Empty name' });
+      return;
+    }
+    if (!clan) {
+      _uploadParsed.push({ line: i+1, raw: line, name, clan: null, status: 'err', msg: 'Unknown clan "' + parts[1] + '"' });
+      return;
+    }
+    const isDup = state.players.some(p => p.name.toLowerCase() === name.toLowerCase())
+               || _uploadParsed.some(p => p.status !== 'err' && p.name && p.name.toLowerCase() === name.toLowerCase());
+    _uploadParsed.push({ line: i+1, raw: line, name, clan, status: isDup ? 'dup' : 'ok', msg: isDup ? 'Already exists' : '' });
+  });
+
+  const ok  = _uploadParsed.filter(r => r.status === 'ok').length;
+  const dup = _uploadParsed.filter(r => r.status === 'dup').length;
+  const err = _uploadParsed.filter(r => r.status === 'err').length;
+
+  const summary = document.getElementById('parseSummary');
+  summary.style.display = 'block';
+  summary.innerHTML = '<span class="ok">✓ ' + ok + ' valid</span>&nbsp;&nbsp;<span class="skip">' + dup + ' duplicate' + (dup!==1?'s':'') + '</span>&nbsp;&nbsp;<span class="skip">' + err + ' error' + (err!==1?'s':'') + '</span>';
+
+  const tbody = document.getElementById('previewBody');
+  tbody.innerHTML = _uploadParsed.map(r => {
+    const cls = r.status === 'err' ? 'row-err' : r.status === 'dup' ? 'row-dup' : 'row-ok';
+    const clanLabel = r.clan
+      ? '<span class="clan-badge ' + CLAN_COLORS[r.clan] + '">' + r.clan + ' · ' + CLANS[r.clan] + '</span>'
+      : '<span style="color:#e07070">—</span>';
+    const statusLabel = r.status === 'ok'
+      ? '<span class="row-status" style="color:#7BC4AA">✓ Add</span>'
+      : r.status === 'dup'
+        ? '<span class="row-status" style="color:var(--gold)">⚠ Duplicate</span>'
+        : '<span class="row-status" style="color:#e07070">✕ ' + escHtml(r.msg) + '</span>';
+    return '<tr class="' + cls + '"><td>' + r.line + '</td><td>' + escHtml(r.name || r.raw) + '</td><td>' + clanLabel + '</td><td>' + statusLabel + '</td></tr>';
+  }).join('');
+
+  document.getElementById('previewWrap').style.display = 'block';
+  document.getElementById('confirmUploadBtn').style.display = ok > 0 ? 'inline-flex' : 'none';
+}
+
+function confirmUpload() {
+  const toAdd = _uploadParsed.filter(r => r.status === 'ok');
+  toAdd.forEach(r => {
+    state.players.push({
+      id: Date.now() + Math.random(),
+      name: r.name, clan: r.clan,
+      score: 0, wins: 0, colorDebt: 0, colorHistory: [], opponents: [], results: [],
+      buchholz: 0, receivedBye: false
+    });
+  });
+  saveState();
+  renderPlayerList();
+  document.getElementById('resetBtn').style.display = 'inline-flex';
+  closeUploadModal();
+  showAlert('✓ Added ' + toAdd.length + ' player' + (toAdd.length !== 1 ? 's' : '') + ' successfully.', 'info');
+}
+// ===================== EXCEL EXPORT =====================
+function exportToExcel() {
+  if (!state.started || state.rounds.length === 0) {
+    showAlert('No tournament data to export.', 'warn');
+    return;
+  }
+
+  const wb = XLSX.utils.book_new();
+  // ---- Sheet 1: Final Standings ----
+  const sorted = [...state.players].sort((a, b) =>
+    b.score - a.score || b.buchholz - a.buchholz || b.wins - a.wins || a.name.localeCompare(b.name)
+  );
+
+  const standingsData = [
+    ['#', 'Player', 'Clan', 'Score', 'Total Opp Score', 'Wins', 'Colors Played', 'Results']
+  ];
+  sorted.forEach((p, i) => {
+    const colors = p.colorHistory.map(c => c === 'W' ? 'W' : c === 'B' ? 'B' : 'BYE').join(' ');
+    const results = p.results.map(r => r === 'W' ? 'Win' : r === 'D' ? 'Draw' : r === 'L' ? 'Loss' : r === 'F' ? 'Forfeit' : 'Bye').join(', ');
+    standingsData.push([
+      i + 1,
+      p.name,
+      CLANS[p.clan] + ' (' + p.clan + ')',
+      p.score,
+      p.buchholz,
+      p.wins || 0,
+      colors,
+      results
+    ]);
+  });
+  const wsStandings = XLSX.utils.aoa_to_sheet(standingsData);
+  wsStandings['!cols'] = [
+    {wch:4},{wch:24},{wch:20},{wch:8},{wch:16},{wch:6},{wch:18},{wch:30}
+  ];
+  XLSX.utils.book_append_sheet(wb, wsStandings, 'Final Standings');
+
+  // ---- Sheet 2: Round-by-Round Results ----
+  const roundData = [
+    ['Round', 'Board', 'White Player', 'White Clan', 'Black Player', 'Black Clan', 'Result', 'Same Clan?', 'Rematch?']
+  ];
+  state.rounds.forEach(round => {
+    let board = 1;
+    round.pairings.forEach(p => {
+      if (p.type === 'bye') {
+        const pl = findPlayer(p.player.id) || p.player;
+        roundData.push([round.number, 'BYE', pl.name, CLANS[pl.clan], '—', '—', 'Bye (1.0 pt)', 'No', 'No']);
+      } else {
+        const w = findPlayer(p.white.id) || p.white;
+        const b = findPlayer(p.black.id) || p.black;
+        const resultStr = p.result === 'white' ? '1 - 0 (White wins)'
+          : p.result === 'black' ? '0 - 1 (Black wins)'
+          : p.result === 'draw' ? '½ - ½ (Draw)'
+          : p.result === 'forfeit' ? '0 - 0 (Both Forfeit)'
+          : 'Pending';
+        roundData.push([
+          round.number, board++,
+          w.name, CLANS[w.clan],
+          b.name, CLANS[b.clan],
+          resultStr,
+          (w.clan === b.clan) ? 'Yes ⚠' : 'No',
+          p.rematch ? 'Yes ⚠' : 'No'
+        ]);
+      }
+    });
+  });
+  const wsRounds = XLSX.utils.aoa_to_sheet(roundData);
+  wsRounds['!cols'] = [
+    {wch:7},{wch:7},{wch:22},{wch:16},{wch:22},{wch:16},{wch:22},{wch:12},{wch:12}
+  ];
+  XLSX.utils.book_append_sheet(wb, wsRounds, 'Round Results');
+
+  // ---- Sheet 3: Clan Summary ----
+  const clanData = [['Clan', 'Clan Name', 'Players', 'Total Score', 'Avg Score per Player']];
+  Object.keys(CLANS).forEach(clan => {
+    const members = state.players.filter(p => p.clan === clan);
+    const total = members.reduce((s, p) => s + p.score, 0);
+    const avg = members.length ? parseFloat((total / members.length).toFixed(2)) : 0;
+    clanData.push([clan, CLANS[clan], members.length, total, avg]);
+  });
+  const wsClan = XLSX.utils.aoa_to_sheet(clanData);
+  wsClan['!cols'] = [{wch:6},{wch:18},{wch:10},{wch:14},{wch:22}];
+  XLSX.utils.book_append_sheet(wb, wsClan, 'Clan Summary');
+
+  // ---- Sheet 4: Player vs Player matrix ----
+  const allNames = sorted.map(p => p.name);
+  const matrixHeader = ['Player \ Opponent', ...allNames];
+  const matrixRows = [matrixHeader];
+
+  sorted.forEach(p => {
+    const row = [p.name];
+    sorted.forEach(opp => {
+      if (p.id === opp.id) { row.push('—'); return; }
+      // Accumulate all results (rematches show multiple)
+      const results = [];
+      state.rounds.forEach(round => {
+        round.pairings.forEach(pair => {
+          if (pair.type !== 'game') return;
+          const wId = pair.white.id, bId = pair.black.id;
+          let r = '';
+          if (wId === p.id && bId === opp.id) {
+            r = pair.result === 'white' ? 'W(R'+round.number+')' : pair.result === 'black' ? 'L(R'+round.number+')' : pair.result === 'draw' ? 'D(R'+round.number+')' : pair.result === 'forfeit' ? 'F(R'+round.number+')' : '';
+          } else if (bId === p.id && wId === opp.id) {
+            r = pair.result === 'black' ? 'W(R'+round.number+')' : pair.result === 'white' ? 'L(R'+round.number+')' : pair.result === 'draw' ? 'D(R'+round.number+')' : pair.result === 'forfeit' ? 'F(R'+round.number+')' : '';
+          }
+          if (r) results.push(r);
+        });
+      });
+      row.push(results.join(', ') || '');
+    });
+    matrixRows.push(row);
+  });
+  const wsMatrix = XLSX.utils.aoa_to_sheet(matrixRows);
+  const matrixCols = [{wch:24}, ...allNames.map(() => ({wch:10}))];
+  wsMatrix['!cols'] = matrixCols;
+  XLSX.utils.book_append_sheet(wb, wsMatrix, 'Head to Head');
+
+  // ---- Download ----
+  const tournamentSlug = state.tournamentName.replace(/[^a-z0-9]/gi, '_');
+  XLSX.writeFile(wb, tournamentSlug + '_Results.xlsx');
+  showAlert('\u2713 Exported successfully!', 'info');
+}
+
+</script>
+
+<!-- Mass Upload Modal -->
+<div class="modal-backdrop" id="uploadModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">&#11014; Mass Upload Players</span>
+      <button class="modal-close" onclick="closeUploadModal()">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <div class="format-hint">
+        <strong>Accepted formats &mdash; one player per line:</strong>
+        Name, ClanLetter &nbsp;&rarr;&nbsp; <span style="color:var(--ivory)">Arjun Kumar, A</span><br>
+        Name, ClanName &nbsp;&nbsp;&rarr;&nbsp; <span style="color:var(--ivory)">Arjun Kumar, Rashtrakutas</span><br>
+        <span style="margin-top:6px;display:block">Clan letters: <strong style="color:var(--ivory)">A</strong> = Rashtrakutas &nbsp; <strong style="color:var(--ivory)">B</strong> = Cholas &nbsp; <strong style="color:var(--ivory)">C</strong> = Mauryas &nbsp; <strong style="color:var(--ivory)">D</strong> = Chalukyas</span>
+      </div>
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" accept=".csv,.txt" id="csvFileInput" onchange="handleFileUpload(event)" />
+        <span class="upload-icon">&#128194;</span>
+        <div style="font-weight:600;margin-bottom:6px">Drop a CSV / TXT file here</div>
+        <div class="upload-hint">or <strong>click to browse</strong></div>
+      </div>
+      <div style="text-align:center;margin:14px 0;font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--warm-gray);letter-spacing:0.1em">&mdash; OR PASTE BELOW &mdash;</div>
+      <label>Paste player list</label>
+      <textarea class="paste-area" id="pasteArea" placeholder="Arjun Kumar, A&#10;Priya Sharma, Cholas&#10;Ravi Iyer, C&#10;Meena Pillai, Chalukyas"></textarea>
+      <div id="parseSummary" style="display:none" class="parse-summary"></div>
+      <div id="previewWrap" style="display:none">
+        <table class="preview-table">
+          <thead><tr><th>#</th><th>Name</th><th>Clan</th><th>Status</th></tr></thead>
+          <tbody id="previewBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="parseUploadPreview()">&#128065; Preview</button>
+      <button class="btn btn-gold" id="confirmUploadBtn" style="display:none" onclick="confirmUpload()">&#10003; Add Valid Players</button>
+      <button class="btn btn-outline" onclick="closeUploadModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
